@@ -1,0 +1,7 @@
+numpy
+pysnmp
+requests
+influxdb-client
+pyyaml
+pytest
+logging
