@@ -21,19 +21,25 @@ def get_logs_switch(ip: str, auth: dict) -> dict:
         return {"error": "Authentication failed"}
 
     url = f"http://{ip}/data/logtable.json"
-    headers = {
+    params = {
         "_tid_": auth["_tid_"],
         "usrLvl": str(auth["usrLvl"]),
     }
-    payload = {"operation": "load"}
+    payload = {
+        "operation": "load",
+    }
 
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=5)
+        response = requests.post(url, json=payload, params=params, timeout=5)
         response.raise_for_status()
         data = response.json()
-        logger.info(
-            f"Successfully retrieved {len(data.get('data', []))} logs from {ip}"
-        )
+
+        if "data" in data and isinstance(data["data"], list):
+            log_count = len(data["data"])
+            logger.info(f"Successfully retrieved {log_count} logs from {ip}")
+        else:
+            logger.warning(f"No log data available from {ip} - response: {data}")
+
         return data
     except requests.RequestException as e:
         logger.error(f"Failed to retrieve logs from switch at {ip}: {e}", exc_info=True)
