@@ -54,7 +54,7 @@ def main():
     time_data = get_sistem_time(switch_ip, auth)
     print(f"System Time: {time_data}")
 
-    time.sleep(1)
+    time.sleep(5)
 
     logger.info("Testing port status...")
     port_status = get_status_port(switch_ip, auth)

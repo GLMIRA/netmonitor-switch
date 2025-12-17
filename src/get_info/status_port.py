@@ -20,7 +20,7 @@ def get_status_port(ip: str, auth: dict) -> dict:
         logger.error(f"Authentication failed for switch at {ip}: {auth['error']}")
         return {"error": "Authentication failed"}
 
-    url = f"http://{ip}/data/portStatusCfg.json"
+    url = f"http://{ip}/data/port.json"
     params = {
         "_tid_": auth["_tid_"],
         "usrLvl": str(auth["usrLvl"]),
