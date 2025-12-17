@@ -1,7 +1,2 @@
-numpy
-pysnmp
+python-dotenv
 requests
-influxdb-client
-pyyaml
-pytest
-logging
