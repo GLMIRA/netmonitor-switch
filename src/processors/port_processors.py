@@ -124,15 +124,12 @@ def processor_port_status(raw_data: dict) -> dict:
         for port_data in ports_list:
             port_number = port_data.get("port")
 
-            # Link pode vir como string
             link_raw = port_data.get("link", "Unknown")
             link = link_raw.lower() if isinstance(link_raw, str) else "unknown"
 
-            # State vem como int, converter para string
             state_raw = port_data.get("state", "Unknown")
             state = str(state_raw).lower() if state_raw != "Unknown" else "unknown"
 
-            # Speed pode vir como string
             speed_raw = port_data.get("speed", "Unknown")
             speed = (
                 speed_raw.split()[0].lower()
