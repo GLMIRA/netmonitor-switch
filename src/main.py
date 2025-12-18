@@ -17,6 +17,8 @@ from src.processors.port_processors import (
     merge_port_data,
 )
 from src.processors.mac_adress import processor_mac_adress, count_macs_per_port
+from src.processors.system_processor import processor_system_info
+from src.processors.logs_processors import processor_logs
 from src.utils.logger import setup_logging, get_logger
 
 
@@ -65,14 +67,16 @@ def main():
     time.sleep(1)
 
     # ========================================
-    # SYSTEM TIME
+    # SYSTEM INFO
     # ========================================
     logger.info("=" * 50)
-    logger.info("Testing system time...")
-    time_raw = get_sistem_time(switch_ip, auth)
-    logger.info(f"SYSTEM RAW DATA: {time_raw}")
-    print(f"\n[SYSTEM] Raw: {time_raw}\n")
-    # TODO: Criar system_processor
+    logger.info("Testing system info...")
+    system_raw = get_sistem_time(switch_ip, auth)
+    logger.info(f"SYSTEM RAW DATA: {system_raw}")
+
+    system_processed = processor_system_info(system_raw, switch_ip)
+    logger.info(f"SYSTEM PROCESSED DATA: {system_processed}")
+    print(f"\n[SYSTEM] Processed: {system_processed}\n")
 
     time.sleep(1)
 
@@ -143,10 +147,11 @@ def main():
     logger.info(
         f"LOGS RAW DATA (first 3): {logs_raw.get('data', [])[:3] if logs_raw.get('data') else 'No logs'}"
     )
-    print(
-        f"\n[LOGS] Raw (first 3): {logs_raw.get('data', [])[:3] if logs_raw.get('data') else 'No logs'}\n"
-    )
-    # TODO: Criar log_processor
+
+    logs_processed = processor_logs(logs_raw, switch_ip)
+    logger.info(f"LOGS PROCESSED (first 3): {logs_processed.get('logs', [])[:3]}")
+    logger.info(f"LOGS SEVERITY COUNT: {logs_processed.get('severity_count', {})}")
+    print(f"\n[LOGS] Severity count: {logs_processed.get('severity_count', {})}\n")
 
     time.sleep(1)
 
@@ -158,9 +163,13 @@ def main():
     logger.info(
         f"CPU Usage: {cpu_processed.get('cpu_usage_percent')}% ({cpu_processed.get('status')})"
     )
+    logger.info(
+        f"System: {system_processed.get('hostname')} - Temp: {system_processed.get('temperature')}°C ({system_processed.get('temp_status')}) - Uptime: {system_processed.get('uptime_days')} days"
+    )
     logger.info(f"Total Ports Processed: {len(merged_ports.get('ports', []))}")
     logger.info(f"Total MAC Addresses: {len(mac_processed.get('mac_addresses', []))}")
     logger.info(f"Ports with devices: {len([p for p in mac_count.keys()])}")
+    logger.info(f"Total Logs: {len(logs_processed.get('logs', []))}")
 
 
 if __name__ == "__main__":
