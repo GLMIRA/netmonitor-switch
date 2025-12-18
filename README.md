@@ -1,8 +1,27 @@
-# Network Monitoring System
+# NetMonitor Switch 🔌
 
-This project is a Python-based network monitoring system that utilizes SNMP (Simple Network Management Protocol) to gather and analyze data from network devices. The system is designed to monitor various metrics, send alerts, and store data for further analysis.
+Monitoramento em tempo real de switches TP-Link (SG3428/SG series) com coleta de métricas de CPU, portas, temperatura, MAC table e logs do sistema.
 
-## Project Structure
+## 🚀 Features
+
+- ✅ **Monitoramento de CPU** - Uso em tempo real com status (normal/warning/critical)
+- ✅ **Análise de Tráfego de Portas** - RX/TX em bytes e pacotes
+- ✅ **Status de Portas** - Link up/down, estado, velocidade
+- ✅ **Rastreamento de Dispositivos** - Tabela MAC com contagem por porta
+- ✅ **System Health** - Temperatura, fan status, uptime
+- ✅ **Logs Centralizados** - Coleta e classificação por severidade
+- ✅ **InfluxDB Integration** - Armazenamento time-series
+- ✅ **Grafana Dashboards** - Visualização de métricas
+
+## 📊 Stack Tecnológica
+
+- **Python 3.13** - Linguagem principal
+- **InfluxDB 2.7** - Banco de dados time-series
+- **Grafana** - Dashboards e visualização
+- **Docker Compose** - Orquestração de containers
+- **TP-Link API** - Comunicação com switches SG series
+
+## 🏗️ Estrutura do Projeto
 
 ```
 network-monitor
@@ -38,14 +57,6 @@ network-monitor
 ├── setup.py
 └── README.md
 ```
-
-## Features
-
-- **SNMP Data Collection**: Collects data from network devices using SNMP.
-- **Device Monitoring**: Monitors the status and performance of network devices.
-- **Alerting System**: Sends notifications based on predefined thresholds and conditions.
-- **Data Storage**: Stores collected data in a database for historical analysis.
-- **Configuration Management**: Easily configurable through YAML files and environment variables.
 
 ## Installation
 
