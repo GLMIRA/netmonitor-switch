@@ -24,38 +24,29 @@ Monitoramento em tempo real de switches TP-Link (SG3428/SG series) com coleta de
 ## 🏗️ Estrutura do Projeto
 
 ```
-network-monitor
-├── src
-│   ├── __init__.py
-│   ├── main.py
-│   ├── snmp
-│   │   ├── __init__.py
-│   │   ├── client.py
-│   │   └── parser.py
-│   ├── monitor
-│   │   ├── __init__.py
-│   │   ├── device_monitor.py
-│   │   └── metrics.py
-│   ├── storage
-│   │   ├── __init__.py
-│   │   └── database.py
-│   ├── alerts
-│   │   ├── __init__.py
-│   │   └── notifier.py
-│   └── utils
-│       ├── __init__.py
-│       └── config.py
-├── tests
-│   ├── __init__.py
-│   ├── test_snmp.py
-│   ├── test_monitor.py
-│   └── test_alerts.py
-├── config
-│   ├── devices.yaml
-│   └── settings.yaml
-├── requirements.txt
-├── setup.py
-└── README.md
+netmonitor-switch/
+src/
+├── auth/
+│   └── auth_switch.py
+├── collectors/                    
+│   ├── cpu_info.py
+│   ├── port_util.py
+│   ├── status_port.py
+│   ├── mac_address.py             
+│   ├── system_time.py
+│   └── logs_switch.py
+├── processors/
+│   ├── cpu_processor.py
+│   ├── port_processors.py
+│   ├── mac_address.py             
+│   ├── system_processor.py
+│   └── logs_processors.py
+├── database/
+│   └── influx_db.py
+├── utils/
+│   └── logger.py
+└── main.py
+
 ```
 
 ## Installation

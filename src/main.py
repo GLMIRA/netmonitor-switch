@@ -4,19 +4,19 @@ import time
 from dotenv import load_dotenv
 
 from src.auth.auth_switch import switch_auth
-from src.get_info.cpu_info import get_cpu_info
-from src.get_info.logs_switch import get_logs_switch
-from src.get_info.mac_adress import get_mac_address_info
-from src.get_info.port_util import get_port_info
-from src.get_info.system_time import get_sistem_time
-from src.get_info.status_port import get_status_port
+from src.collectors.collectors_cpu import get_cpu_info
+from src.collectors.collectors_logs import get_logs_switch
+from src.collectors.collectors_mac import get_mac_address_info
+from src.collectors.collectors_port import get_port_info
+from src.collectors.collectors_system_time import get_sistem_time
+from src.collectors.collector_status_port import get_status_port
 from src.processors.cpu_processor import process_cpu_info
 from src.processors.port_processors import (
     processor_port_trafic,
     processor_port_status,
     merge_port_data,
 )
-from src.processors.mac_adress import processor_mac_adress, count_macs_per_port
+from src.processors.mac_processors import processor_mac_adress, count_macs_per_port
 from src.processors.system_processor import processor_system_info
 from src.processors.logs_processors import processor_logs
 from src.utils.logger import setup_logging, get_logger

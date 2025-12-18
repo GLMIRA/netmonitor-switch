@@ -121,22 +121,27 @@ def processor_port_status(raw_data: dict) -> dict:
 
         processed_ports = []
 
+        # Mapeamento correto dos códigos da API TP-Link
+        link_status_map = {0: "down", 1: "up"}
+        state_map = {0: "disabled", 1: "forwarding"}
+        speed_map = {0: "no_link", 1: "10m", 2: "100m", 3: "1000m"}
+
         for port_data in ports_list:
             port_number = port_data.get("port")
 
-            link_raw = port_data.get("link", "Unknown")
-            link = link_raw.lower() if isinstance(link_raw, str) else "unknown"
+            # Usar 'linkStatus' (não 'link')
+            link_status_code = port_data.get("linkStatus", 0)
+            link = link_status_map.get(link_status_code, "unknown")
 
-            state_raw = port_data.get("state", "Unknown")
-            state = str(state_raw).lower() if state_raw != "Unknown" else "unknown"
+            # Mapear 'state' (código numérico)
+            state_code = port_data.get("state", 0)
+            state = state_map.get(state_code, "unknown")
 
-            speed_raw = port_data.get("speed", "Unknown")
-            speed = (
-                speed_raw.split()[0].lower()
-                if isinstance(speed_raw, str) and speed_raw != "Unknown"
-                else "unknown"
-            )
+            # Usar 'speedLink' (não 'speed')
+            speed_code = port_data.get("speedLink", 0)
+            speed = speed_map.get(speed_code, "unknown")
 
+            # Link up = conectado
             is_connected = link == "up"
 
             processed_port = {
@@ -148,6 +153,7 @@ def processor_port_status(raw_data: dict) -> dict:
             }
             logger.info(f"Processed port status info: {processed_port}")
             processed_ports.append(processed_port)
+
         return {"ports": processed_ports}
     except (KeyError, TypeError) as e:
         logger.error(f"Malformed port status data: {e}")
