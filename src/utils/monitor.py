@@ -4,11 +4,12 @@ import time
 import gc
 from datetime import datetime
 
-from src.auth.auth_switch import switch_auth
-from src.collectors.collector import DataCollector
+from src.auth.switch import switch_auth
 from src.utils.config import Config
-from src.database.influx_db import InfluxDB  # ← ADICIONAR
+from src.database.client import InfluxDB
 from src.utils.logger import setup_logging, get_logger
+from src.collectors.switch.base import DataCollector
+from src.collectors.switch.cpu import get_cpu_info
 
 
 class SwitchMonitor:
@@ -48,11 +49,11 @@ class SwitchMonitor:
 
     def test_auth(self) -> bool:
         """Testa se a autenticação ainda é válida."""
+
         if self.auth is None:
             return False
 
         try:
-            from src.collectors.collectors_cpu import get_cpu_info
 
             cpu_raw = get_cpu_info(self.switch_ip, self.auth)
 

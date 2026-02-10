@@ -15,7 +15,7 @@ class Config:
     SWITCH_PASSWORD = os.getenv("SWITCH_PASSWORD")
 
     # Intervalos (segundos)
-    COLLECTION_INTERVAL = 300  # 5 minutos
+    COLLECTION_INTERVAL = 10  # 10 segundos
     RETRY_INTERVAL = 60  # 1 minuto após erro
     REQUEST_DELAY = 2  # Delay entre requests
 

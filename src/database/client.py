@@ -24,8 +24,7 @@ class InfluxDB:
         self.bucket = os.getenv("INFLUXDB_BUCKET", "switch_monitoring")
 
         if not self.token:
-            self.logger.error("INFLUXDB_TOKEN not set in environment variables")
-            raise ValueError("Missing INFLUXDB_TOKEN")
+            raise ValueError("INFLUXDB_TOKEN not found in environment variables")
 
         try:
             self.client = InfluxDBClient(url=self.url, token=self.token, org=self.org)
@@ -45,24 +44,19 @@ class InfluxDB:
             bool: True if successful, False otherwise
         """
         if "error" in cpu_data:
-            self.logger.warning(
-                f"Skipping CPU data write due to error: {cpu_data['error']}"
-            )
+            self.logger.error(f"Cannot write CPU data with error: {cpu_data['error']}")
             return False
 
         try:
             point = (
                 Point("cpu_usage")
-                .tag("switch_ip", cpu_data.get("switch_ip"))
-                .tag("status", cpu_data.get("status"))
-                .field("usage_percent", cpu_data.get("cpu_usage_percent"))
+                .tag("switch_ip", cpu_data.get("switch_ip", "unknown"))
+                .field("cpu_percent", cpu_data.get("cpu", 0))
                 .time(datetime.now(timezone.utc), WritePrecision.NS)
             )
 
             self.write_api.write(bucket=self.bucket, record=point)
-            self.logger.debug(
-                f"Wrote CPU data for {cpu_data.get('switch_ip')}: {cpu_data.get('cpu_usage_percent')}%"
-            )
+            self.logger.debug(f"Wrote CPU data: {cpu_data.get('cpu')}%")
             return True
 
         except Exception as e:
@@ -79,28 +73,27 @@ class InfluxDB:
             bool: True if successful, False otherwise
         """
         if "error" in system_data:
-            self.logger.warning(
-                f"Skipping system data write due to error: {system_data['error']}"
+            self.logger.error(
+                f"Cannot write system data with error: {system_data['error']}"
             )
             return False
 
         try:
             point = (
                 Point("system_info")
-                .tag("switch_ip", system_data.get("switch_ip"))
-                .tag("hostname", system_data.get("hostname"))
-                .tag("temp_status", system_data.get("temp_status"))
-                .tag("fan_status", system_data.get("fan_status"))
-                .field("temperature", system_data.get("temperature"))
-                .field("uptime_seconds", system_data.get("uptime_seconds"))
-                .field("uptime_days", system_data.get("uptime_days"))
-                .field("snmp_enabled", system_data.get("snmp_enabled"))
-                .field("ssh_enabled", system_data.get("ssh_enabled"))
+                .tag("switch_ip", system_data.get("switch_ip", "unknown"))
+                .tag("model", system_data.get("model", "unknown"))
+                .field("uptime_seconds", system_data.get("uptime_seconds", 0))
+                .field("temperature", system_data.get("temperature", 0))
+                .field("firmware", system_data.get("firmware", "unknown"))
                 .time(datetime.now(timezone.utc), WritePrecision.NS)
             )
 
             self.write_api.write(bucket=self.bucket, record=point)
-            self.logger.debug(f"Wrote system data for {system_data.get('hostname')}")
+            self.logger.debug(
+                f"Wrote system data: {system_data.get('temperature')}°C, "
+                f"Uptime: {system_data.get('uptime_seconds')}s"
+            )
             return True
 
         except Exception as e:
@@ -117,8 +110,8 @@ class InfluxDB:
             bool: True if successful, False otherwise
         """
         if "error" in ports_data:
-            self.logger.warning(
-                f"Skipping port data write due to error: {ports_data['error']}"
+            self.logger.error(
+                f"Cannot write port data with error: {ports_data['error']}"
             )
             return False
 
@@ -127,7 +120,8 @@ class InfluxDB:
             for port in ports_data.get("ports", []):
                 point = (
                     Point("port_traffic")
-                    .tag("port", port.get("port"))
+                    .tag("switch_ip", ports_data.get("switch_ip", "unknown"))
+                    .tag("port", port.get("port", "unknown"))
                     .tag("link", port.get("link", "unknown"))
                     .tag("state", port.get("state", "unknown"))
                     .field("packets_rx", port.get("packets_rx", 0))
@@ -138,7 +132,7 @@ class InfluxDB:
                     .field("bytes_tx_mb", port.get("bytes_tx_mb", 0.0))
                     .field("total_packets", port.get("total_packets", 0))
                     .field("total_bytes", port.get("total_bytes", 0))
-                    .field("is_connected", port.get("is_connected", False))
+                    .field("is_connected", port.get("link") == "up")
                     .time(datetime.now(timezone.utc), WritePrecision.NS)
                 )
                 points.append(point)
@@ -168,13 +162,15 @@ class InfluxDB:
 
         try:
             points = []
-            for entry in mac_data.get("mac_addresses", []):
+            for entry in mac_data.get("mac_table", []):
                 point = (
-                    Point("mac_table")
-                    .tag("port", entry.get("port"))
-                    .tag("mac", entry.get("mac"))
-                    .tag("type", entry.get("type"))
-                    .field("vlan", entry.get("vlan", 1))
+                    Point("mac_addresses")
+                    .tag("switch_ip", mac_data.get("switch_ip", "unknown"))
+                    .tag("port", entry.get("port", "unknown"))
+                    .tag("vlan", str(entry.get("vlan", "1")))
+                    .tag("mac_address", entry.get("mac", "unknown"))
+                    .field("type", entry.get("type", "unknown"))
+                    .field("aging_time", entry.get("aging", 0))
                     .time(datetime.now(timezone.utc), WritePrecision.NS)
                 )
                 points.append(point)
@@ -188,14 +184,7 @@ class InfluxDB:
             return False
 
     def write_log_data(self, logs_data: Dict) -> bool:
-        """Write switch logs to InfluxDB.
-
-        Args:
-            logs_data: Processed logs from processor_logs()
-
-        Returns:
-            bool: True if successful, False otherwise
-        """
+        """Write switch logs to InfluxDB."""
         if "error" in logs_data:
             self.logger.warning(
                 f"Skipping logs write due to error: {logs_data['error']}"
@@ -209,10 +198,11 @@ class InfluxDB:
                     Point("switch_logs")
                     .tag("switch_ip", log.get("switch_ip"))
                     .tag("severity", log.get("severity"))
-                    .tag("source_ip", log.get("source_ip"))
+                    .tag("module_name", self._get_module_name(log.get("module")))
+                    .field("module_id", log.get("module"))
                     .field("severity_num", log.get("severity_num"))
-                    .field("module", log.get("module"))
-                    .field("content", log.get("content"))
+                    .field("message", log.get("content", ""))
+                    .field("source_ip", log.get("source_ip", ""))
                     .time(datetime.now(timezone.utc), WritePrecision.NS)
                 )
                 points.append(point)
@@ -225,10 +215,32 @@ class InfluxDB:
             self.logger.error(f"Failed to write log data: {e}")
             return False
 
+    def _get_module_name(self, module_id: int) -> str:
+        """Convert TP-Link module ID to readable name.
+
+        Args:
+            module_id: Numeric module identifier from switch logs
+
+        Returns:
+            Human-readable module name
+        """
+        modules = {
+            196: "WEB",
+            170: "SYSTEM",
+            174: "PORT",
+            160: "VLAN",
+            225: "STP",
+            214: "MAC",
+            215: "LOG",
+            198: "CLI",
+            182: "SNMP",
+            166: "CONFIG",
+            169: "AUTHENTICATION",
+        }
+        return modules.get(module_id, f"MODULE_{module_id}")
+
     def close(self):
         """Close InfluxDB connection."""
-        try:
+        if self.client:
             self.client.close()
-            self.logger.info("Closed InfluxDB connection")
-        except Exception as e:
-            self.logger.error(f"Error closing InfluxDB connection: {e}")
+            self.logger.debug("InfluxDB connection closed")
