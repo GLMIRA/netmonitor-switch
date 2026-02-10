@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # InfluxDB - Banco de dados
+  # ==========================================
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: switch_influxdb
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword
+      - DOCKER_INFLUXDB_INIT_ORG=myorg
+      - DOCKER_INFLUXDB_INIT_BUCKET=switch_monitoring
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-token
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+      - influxdb_config:/etc/influxdb2
+    networks:
+      - monitoring
+    # ✅ HEALTHCHECK do InfluxDB
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ==========================================
+  # Grafana - Visualização
+  # ==========================================
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: switch_grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - monitoring
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    # ✅ HEALTHCHECK do Grafana
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ==========================================
+  # Monitor - SUA APLICAÇÃO
+  # ==========================================
+  monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: switch_monitor
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=my-super-secret-token
+      - INFLUXDB_ORG=myorg
+      - INFLUXDB_BUCKET=switch_monitoring
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - monitoring
+    depends_on:
+      influxdb:
+        condition: service_healthy
+      grafana:
+        condition: service_healthy
+    # ✅ HEALTHCHECK do Monitor (herdado do Dockerfile)
+    # Mas podemos sobrescrever aqui se quiser:
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'python -m src.main' && test -f /app/logs/app.log || exit 1"]
+      interval: 2m
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  monitoring:
+    driver: bridge
+
+volumes:
+  influxdb_data:
+  influxdb_config:
+  grafana_data:
