@@ -1,7 +1,9 @@
 version: '3.8'
 
 services:
-  # InfluxDB - Banco de dados de séries temporais
+  # ==========================================
+  # InfluxDB - Banco de dados
+  # ==========================================
   influxdb:
     image: influxdb:2.7-alpine
     container_name: switch_influxdb
@@ -20,6 +22,7 @@ services:
       - influxdb_config:/etc/influxdb2
     networks:
       - monitoring
+    # ✅ HEALTHCHECK do InfluxDB
     healthcheck:
       test: ["CMD", "influx", "ping"]
       interval: 30s
@@ -27,7 +30,9 @@ services:
       retries: 5
       start_period: 30s
 
-  # Grafana - Visualização de dados
+  # ==========================================
+  # Grafana - Visualização
+  # ==========================================
   grafana:
     image: grafana/grafana:10.2.3
     container_name: switch_grafana
@@ -40,11 +45,13 @@ services:
       - GF_INSTALL_PLUGINS=
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
     networks:
       - monitoring
     depends_on:
       influxdb:
         condition: service_healthy
+    # ✅ HEALTHCHECK do Grafana
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
       interval: 30s
@@ -52,35 +59,39 @@ services:
       retries: 5
       start_period: 30s
 
-  # Monitor - Aplicação de coleta
+  # ==========================================
+  # Monitor - SUA APLICAÇÃO
+  # ==========================================
   monitor:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: switch_monitor
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      - SWITCH_IP=${SWITCH_IP}
-      - SWITCH_USER=${SWITCH_USER}
-      - SWITCH_PASSWORD=${SWITCH_PASSWORD}
       - INFLUXDB_URL=http://influxdb:8086
       - INFLUXDB_TOKEN=my-super-secret-token
       - INFLUXDB_ORG=myorg
       - INFLUXDB_BUCKET=switch_monitoring
     volumes:
       - ./logs:/app/logs
-      - ./.env:/app/.env
     networks:
       - monitoring
     depends_on:
       influxdb:
         condition: service_healthy
+      grafana:
+        condition: service_healthy
+    # ✅ HEALTHCHECK do Monitor (herdado do Dockerfile)
+    # Mas podemos sobrescrever aqui se quiser:
     healthcheck:
-      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
-      interval: 1m
+      test: ["CMD-SHELL", "pgrep -f 'python -m src.main' && test -f /app/logs/app.log || exit 1"]
+      interval: 2m
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 40s
 
 networks:
   monitoring:
