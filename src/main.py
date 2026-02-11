@@ -1,11 +1,11 @@
 """Entry point do sistema de monitoramento."""
 
-from src.utils.monitor import SwitchMonitor
+from src.utils.monitor import NetworkMonitor
 
 
 def main():
     """Inicia o monitor."""
-    monitor = SwitchMonitor()
+    monitor = NetworkMonitor()
     monitor.run()
     return 0
 
