@@ -20,7 +20,7 @@ class InfluxDBSwitch:
         self.url = os.getenv("INFLUXDB_URL", "http://localhost:8086")
         self.token = os.getenv("INFLUXDB_TOKEN")
         self.org = os.getenv("INFLUXDB_ORG", "myorg")
-        self.bucket = os.getenv("INFLUXDB_BUCKET", "switch_monitoring")
+        self.bucket = os.getenv("INFLUXDB_BUCKET_SWITCH", "switch_monitoring")
 
         if not self.token:
             raise ValueError("INFLUXDB_TOKEN not found in environment variables")
@@ -28,10 +28,23 @@ class InfluxDBSwitch:
         try:
             self.client = InfluxDBClient(url=self.url, token=self.token, org=self.org)
             self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
-            self.logger.info(f"Connected to InfluxDB at {self.url}")
+            self._ensure_bucket()
+            self.logger.info(
+                f"Connected to InfluxDB at {self.url} (bucket: {self.bucket})"
+            )
         except Exception as e:
             self.logger.error(f"Failed to connect to InfluxDB: {e}")
             raise
+
+    def _ensure_bucket(self):
+        """Create bucket if it doesn't exist."""
+        try:
+            buckets_api = self.client.buckets_api()
+            if not buckets_api.find_bucket_by_name(self.bucket):
+                buckets_api.create_bucket(bucket_name=self.bucket, org=self.org)
+                self.logger.info(f"Created bucket: {self.bucket}")
+        except Exception as e:
+            self.logger.warning(f"Could not verify/create bucket '{self.bucket}': {e}")
 
     def write_cpu_data(self, cpu_data: Dict) -> bool:
         """Write CPU data to InfluxDB.
@@ -256,7 +269,7 @@ class InfluxDBRouter:
         self.url = os.getenv("INFLUXDB_URL", "http://localhost:8086")
         self.token = os.getenv("INFLUXDB_TOKEN")
         self.org = os.getenv("INFLUXDB_ORG", "myorg")
-        self.bucket = os.getenv("INFLUXDB_BUCKET", "router_monitoring")
+        self.bucket = os.getenv("INFLUXDB_BUCKET_ROUTER", "router_monitoring")
 
         if not self.token:
             raise ValueError("INFLUXDB_TOKEN not found in environment variables")
@@ -264,12 +277,23 @@ class InfluxDBRouter:
         try:
             self.client = InfluxDBClient(url=self.url, token=self.token, org=self.org)
             self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
+            self._ensure_bucket()
             self.logger.info(
-                f"Connected to InfluxDB at {self.url} for router monitoring"
+                f"Connected to InfluxDB at {self.url} (bucket: {self.bucket})"
             )
         except Exception as e:
             self.logger.error(f"Failed to connect to InfluxDB: {e}")
             raise
+
+    def _ensure_bucket(self):
+        """Create bucket if it doesn't exist."""
+        try:
+            buckets_api = self.client.buckets_api()
+            if not buckets_api.find_bucket_by_name(self.bucket):
+                buckets_api.create_bucket(bucket_name=self.bucket, org=self.org)
+                self.logger.info(f"Created bucket: {self.bucket}")
+        except Exception as e:
+            self.logger.warning(f"Could not verify/create bucket '{self.bucket}': {e}")
 
     def write_host_summary(self, host_summary: Dict) -> bool:
         """Write aggregated host metrics to InfluxDB.
