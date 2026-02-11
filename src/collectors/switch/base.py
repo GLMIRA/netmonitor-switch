@@ -58,9 +58,13 @@ class DataCollector:
             logs_data = processor_logs(logs_raw, self.switch_ip)
 
             ports_combined = {
+                "switch_ip": self.switch_ip,
                 "ports": port_data.get("ports", []),
                 "port_status": port_status_data.get("ports", []),
             }
+
+            if "mac_addresses" in mac_data:
+                mac_data["switch_ip"] = self.switch_ip
 
             result = {
                 "cpu": cpu_data,
