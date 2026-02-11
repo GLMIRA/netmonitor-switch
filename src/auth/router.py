@@ -14,10 +14,6 @@ load_dotenv()
 
 logger = get_logger(__name__)
 
-ROUTER_IP = os.getenv("IP_ROUTER")
-ROUTER_USERNAME = os.getenv("USERNAME_ROUTER")
-ROUTER_PASSWORD = os.getenv("PASSWORD_ROUTER")
-
 
 def _generate_nonce() -> str:
     return secrets.token_hex(32)
@@ -72,11 +68,13 @@ def _calculate_client_proof(
     return client_proof.hex()
 
 
-def get_authenticated_session() -> Optional[requests.Session]:
-    logger.info("Starting router authentication process")
+def get_authenticated_session(
+    router_ip: str, username: str, password: str
+) -> Optional[requests.Session]:
+    logger.info(f"Starting router authentication process for {router_ip}")
 
     session = requests.Session()
-    base_url = f"http://{ROUTER_IP}"
+    base_url = f"http://{router_ip}"
 
     csrf_tokens = _get_csrf_token(session, base_url)
     if not csrf_tokens:
@@ -88,7 +86,7 @@ def get_authenticated_session() -> Optional[requests.Session]:
     logger.debug("Sending username to obtain server nonce")
     nonce_url = f"{base_url}/api/system/user_login_nonce"
     nonce_payload = {
-        "data": {"username": ROUTER_USERNAME, "firstnonce": first_nonce},
+        "data": {"username": username, "firstnonce": first_nonce},
         "csrf": csrf_tokens,
     }
 
@@ -120,7 +118,7 @@ def get_authenticated_session() -> Optional[requests.Session]:
 
     logger.debug("Calculating client proof")
     client_proof = _calculate_client_proof(
-        ROUTER_PASSWORD, salt, iterations, first_nonce, server_nonce
+        password, salt, iterations, first_nonce, server_nonce
     )
 
     logger.debug(f"Client proof calculated: {client_proof[:20]}...")

@@ -7,6 +7,7 @@ from src.collectors.switch.mac import get_mac_address_info
 from src.collectors.switch.port import get_port_info
 from src.collectors.switch.system_time import get_sistem_time
 from src.collectors.switch.port_status import get_status_port
+
 from src.processors.switch.cpu import process_cpu_info
 from src.processors.switch.port import processor_port_trafic, processor_port_status
 from src.processors.switch.mac import processor_mac_adress

@@ -1,5 +1,0 @@
-=== REQUISIÇÃO user_login_nonce ===
-{
-
-=== REQUISIÇÃO user_login_proof ===
-"POST": {
