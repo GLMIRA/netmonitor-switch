@@ -62,13 +62,13 @@ class InfluxDBSwitch:
         try:
             point = (
                 Point("cpu_usage")
-                .tag("switch_ip", cpu_data.get("switch_ip", "unknown"))
-                .field("cpu_percent", cpu_data.get("cpu", 0))
+                .tag("switch_ip", cpu_data["switch_ip"])
+                .field("cpu_percent", cpu_data["cpu_usage_percent"])
                 .time(datetime.now(timezone.utc), WritePrecision.NS)
             )
 
             self.write_api.write(bucket=self.bucket, record=point)
-            self.logger.debug(f"Wrote CPU data: {cpu_data.get('cpu')}%")
+            self.logger.debug(f"Wrote CPU data: {cpu_data.get('cpu_usage_percent')}%")
             return True
 
         except Exception as e:
@@ -93,11 +93,11 @@ class InfluxDBSwitch:
         try:
             point = (
                 Point("system_info")
-                .tag("switch_ip", system_data.get("switch_ip", "unknown"))
-                .tag("model", system_data.get("model", "unknown"))
-                .field("uptime_seconds", system_data.get("uptime_seconds", 0))
-                .field("temperature", system_data.get("temperature", 0))
-                .field("firmware", system_data.get("firmware", "unknown"))
+                .tag("switch_ip", system_data.get("switch_ip"))
+                .tag("model", system_data.get("hardware_version"))
+                .field("uptime_seconds", system_data.get("uptime_seconds"))
+                .field("temperature", system_data.get("temperature"))
+                .field("firmware", system_data.get("firmware_version"))
                 .time(datetime.now(timezone.utc), WritePrecision.NS)
             )
 
@@ -129,22 +129,22 @@ class InfluxDBSwitch:
 
         try:
             points = []
-            for port in ports_data.get("ports", []):
+            for port in ports_data["ports"]:
                 point = (
                     Point("port_traffic")
-                    .tag("switch_ip", ports_data.get("switch_ip", "unknown"))
-                    .tag("port", port.get("port", "unknown"))
-                    .tag("link", port.get("link", "unknown"))
-                    .tag("state", port.get("state", "unknown"))
-                    .field("packets_rx", port.get("packets_rx", 0))
-                    .field("packets_tx", port.get("packets_tx", 0))
-                    .field("bytes_rx", port.get("bytes_rx", 0))
-                    .field("bytes_tx", port.get("bytes_tx", 0))
-                    .field("bytes_rx_mb", port.get("bytes_rx_mb", 0.0))
-                    .field("bytes_tx_mb", port.get("bytes_tx_mb", 0.0))
-                    .field("total_packets", port.get("total_packets", 0))
-                    .field("total_bytes", port.get("total_bytes", 0))
-                    .field("is_connected", port.get("link") == "up")
+                    .tag("switch_ip", ports_data["switch_ip"])
+                    .tag("port", port["port"])
+                    .tag("link", port["link"])
+                    .tag("state", port["state"])
+                    .field("packets_rx", port["packets_rx"])
+                    .field("packets_tx", port["packets_tx"])
+                    .field("bytes_rx", port["bytes_rx"])
+                    .field("bytes_tx", port["bytes_tx"])
+                    .field("bytes_rx_mb", port["bytes_rx_mb"])
+                    .field("bytes_tx_mb", port["bytes_tx_mb"])
+                    .field("total_packets", port["total_packets"])
+                    .field("total_bytes", port["total_bytes"])
+                    .field("is_connected", port["link"] == "up")
                     .time(datetime.now(timezone.utc), WritePrecision.NS)
                 )
                 points.append(point)
@@ -174,15 +174,14 @@ class InfluxDBSwitch:
 
         try:
             points = []
-            for entry in mac_data.get("mac_table", []):
+            for entry in mac_data["mac_addresses"]:
                 point = (
                     Point("mac_addresses")
-                    .tag("switch_ip", mac_data.get("switch_ip", "unknown"))
-                    .tag("port", entry.get("port", "unknown"))
-                    .tag("vlan", str(entry.get("vlan", "1")))
-                    .tag("mac_address", entry.get("mac", "unknown"))
-                    .field("type", entry.get("type", "unknown"))
-                    .field("aging_time", entry.get("aging", 0))
+                    .tag("switch_ip", mac_data["switch_ip"])
+                    .tag("port", entry["port"])
+                    .tag("vlan", str(entry["vlan"]))
+                    .tag("mac_address", entry["mac"])
+                    .field("type", entry["type"])
                     .time(datetime.now(timezone.utc), WritePrecision.NS)
                 )
                 points.append(point)
@@ -205,16 +204,16 @@ class InfluxDBSwitch:
 
         try:
             points = []
-            for log in logs_data.get("logs", []):
+            for log in logs_data["logs"]:
                 point = (
                     Point("switch_logs")
-                    .tag("switch_ip", log.get("switch_ip"))
-                    .tag("severity", log.get("severity"))
-                    .tag("module_name", self._get_module_name(log.get("module")))
-                    .field("module_id", log.get("module"))
-                    .field("severity_num", log.get("severity_num"))
-                    .field("message", log.get("content", ""))
-                    .field("source_ip", log.get("source_ip", ""))
+                    .tag("switch_ip", log["switch_ip"])
+                    .tag("severity", log["severity"])
+                    .tag("module_name", self._get_module_name(log["module"]))
+                    .field("module_id", log["module"])
+                    .field("severity_num", log["severity_num"])
+                    .field("message", log.get("content"))
+                    .field("source_ip", log.get("source_ip"))
                     .time(datetime.now(timezone.utc), WritePrecision.NS)
                 )
                 points.append(point)
@@ -313,29 +312,19 @@ class InfluxDBRouter:
         try:
             point = (
                 Point("host_summary")
-                .tag("router_ip", host_summary.get("router_ip", "unknown"))
-                .field("total_devices", host_summary.get("total_devices", 0))
-                .field("devices_online", host_summary.get("devices_online", 0))
-                .field("devices_offline", host_summary.get("devices_offline", 0))
-                .field("devices_lan", host_summary.get("devices_lan", 0))
-                .field(
-                    "devices_wifi_2_4ghz", host_summary.get("devices_wifi_2_4ghz", 0)
-                )
-                .field("devices_wifi_5ghz", host_summary.get("devices_wifi_5ghz", 0))
-                .field("devices_dhcp", host_summary.get("devices_dhcp", 0))
-                .field("devices_static", host_summary.get("devices_static", 0))
-                .field(
-                    "total_traffic_tx_kb", host_summary.get("total_traffic_tx_kb", 0)
-                )
-                .field(
-                    "total_traffic_rx_kb", host_summary.get("total_traffic_rx_kb", 0)
-                )
-                .field(
-                    "total_traffic_tx_mb", host_summary.get("total_traffic_tx_mb", 0.0)
-                )
-                .field(
-                    "total_traffic_rx_mb", host_summary.get("total_traffic_rx_mb", 0.0)
-                )
+                .tag("router_ip", host_summary["router_ip"])
+                .field("total_devices", host_summary["total_devices"])
+                .field("devices_online", host_summary["devices_online"])
+                .field("devices_offline", host_summary["devices_offline"])
+                .field("devices_lan", host_summary["devices_lan"])
+                .field("devices_wifi_2_4ghz", host_summary["devices_wifi_2_4ghz"])
+                .field("devices_wifi_5ghz", host_summary["devices_wifi_5ghz"])
+                .field("devices_dhcp", host_summary["devices_dhcp"])
+                .field("devices_static", host_summary["devices_static"])
+                .field("total_traffic_tx_kb", host_summary["total_traffic_tx_kb"])
+                .field("total_traffic_rx_kb", host_summary["total_traffic_rx_kb"])
+                .field("total_traffic_tx_mb", host_summary["total_traffic_tx_mb"])
+                .field("total_traffic_rx_mb", host_summary["total_traffic_rx_mb"])
                 .time(datetime.now(timezone.utc), WritePrecision.NS)
             )
 
@@ -368,28 +357,28 @@ class InfluxDBRouter:
             for device in devices_data:
                 point = (
                     Point("host_devices")
-                    .tag("router_ip", device.get("router_ip", "unknown"))
-                    .tag("mac", device.get("mac", "unknown"))
-                    .tag("ip", device.get("ip", "unknown"))
-                    .tag("interface_type", device.get("interface_type", "unknown"))
-                    .tag("connection_type", device.get("connection_type", "unknown"))
-                    .field("hostname", device.get("hostname", "Unknown"))
-                    .field("actual_name", device.get("actual_name", ""))
-                    .field("ipv6", device.get("ipv6", ""))
-                    .field("layer2_interface", device.get("layer2_interface", ""))
-                    .field("active", device.get("active", False))
-                    .field("tx_kb", device.get("tx_kb", 0))
-                    .field("rx_kb", device.get("rx_kb", 0))
-                    .field("tx_mb", device.get("tx_mb", 0.0))
-                    .field("rx_mb", device.get("rx_mb", 0.0))
-                    .field("address_source", device.get("address_source", ""))
-                    .field("lease_time", device.get("lease_time", "0"))
-                    .field("rate_mbps", device.get("rate_mbps", 0))
-                    .field("rssi", device.get("rssi", 0))
-                    .field("sta_rssi_dbm", device.get("sta_rssi_dbm", 0))
-                    .field("phy_mode", device.get("phy_mode", ""))
-                    .field("vendor_class", device.get("vendor_class", ""))
-                    .field("icon_type", device.get("icon_type", ""))
+                    .tag("router_ip", device["router_ip"])
+                    .tag("mac", device["mac"])
+                    .tag("ip", device["ip"])
+                    .tag("interface_type", device["interface_type"])
+                    .tag("connection_type", device["connection_type"])
+                    .field("hostname", device["hostname"])
+                    .field("actual_name", device.get("actual_name"))
+                    .field("ipv6", device.get("ipv6"))
+                    .field("layer2_interface", device.get("layer2_interface"))
+                    .field("active", device["active"])
+                    .field("tx_kb", device["tx_kb"])
+                    .field("rx_kb", device["rx_kb"])
+                    .field("tx_mb", device["tx_mb"])
+                    .field("rx_mb", device["rx_mb"])
+                    .field("address_source", device.get("address_source"))
+                    .field("lease_time", device.get("lease_time"))
+                    .field("rate_mbps", device.get("rate_mbps"))
+                    .field("rssi", device.get("rssi"))
+                    .field("sta_rssi_dbm", device.get("sta_rssi_dbm"))
+                    .field("phy_mode", device.get("phy_mode"))
+                    .field("vendor_class", device.get("vendor_class"))
+                    .field("icon_type", device.get("icon_type"))
                     .time(datetime.now(timezone.utc), WritePrecision.NS)
                 )
                 points.append(point)
@@ -420,35 +409,34 @@ class InfluxDBRouter:
         try:
             point = (
                 Point("wan_status")
-                .tag("router_ip", wan_status.get("router_ip", "unknown"))
-                .tag("interface_name", wan_status.get("interface_name", "unknown"))
-                .field("connection_status", wan_status.get("connection_status", ""))
+                .tag("router_ip", wan_status["router_ip"])
+                .tag("interface_name", wan_status["interface_name"])
+                .field("connection_status", wan_status.get("connection_status"))
                 .field(
-                    "ipv6_connection_status",
-                    wan_status.get("ipv6_connection_status", ""),
+                    "ipv6_connection_status", wan_status.get("ipv6_connection_status")
                 )
-                .field("access_status", wan_status.get("access_status", ""))
-                .field("is_connected", wan_status.get("is_connected", False))
-                .field("interface_enabled", wan_status.get("interface_enabled", False))
-                .field("interface_alias", wan_status.get("interface_alias", ""))
-                .field("ipv4_address", wan_status.get("ipv4_address", ""))
-                .field("ipv4_gateway", wan_status.get("ipv4_gateway", ""))
-                .field("ipv4_mask", wan_status.get("ipv4_mask", ""))
-                .field("ipv6_address", wan_status.get("ipv6_address", ""))
-                .field("ipv6_address_full", wan_status.get("ipv6_address_full", ""))
-                .field("ipv6_prefix_length", wan_status.get("ipv6_prefix_length", 0))
-                .field("ipv6_gateway", wan_status.get("ipv6_gateway", ""))
-                .field("ipv4_dns_servers", wan_status.get("ipv4_dns_servers", ""))
-                .field("ipv6_dns_servers", wan_status.get("ipv6_dns_servers", ""))
-                .field("pppoe_username", wan_status.get("pppoe_username", ""))
-                .field("pppoe_ac_name", wan_status.get("pppoe_ac_name", ""))
-                .field("connection_type", wan_status.get("connection_type", ""))
-                .field("wan_type", wan_status.get("wan_type", ""))
-                .field("ipv4_enabled", wan_status.get("ipv4_enabled", False))
-                .field("ipv6_enabled", wan_status.get("ipv6_enabled", False))
-                .field("nat_type", wan_status.get("nat_type", 0))
-                .field("mtu", wan_status.get("mtu", 0))
-                .field("mru", wan_status.get("mru", 0))
+                .field("access_status", wan_status.get("access_status"))
+                .field("is_connected", wan_status["is_connected"])
+                .field("interface_enabled", wan_status.get("interface_enabled"))
+                .field("interface_alias", wan_status.get("interface_alias"))
+                .field("ipv4_address", wan_status.get("ipv4_address"))
+                .field("ipv4_gateway", wan_status.get("ipv4_gateway"))
+                .field("ipv4_mask", wan_status.get("ipv4_mask"))
+                .field("ipv6_address", wan_status.get("ipv6_address"))
+                .field("ipv6_address_full", wan_status.get("ipv6_address_full"))
+                .field("ipv6_prefix_length", wan_status.get("ipv6_prefix_length"))
+                .field("ipv6_gateway", wan_status.get("ipv6_gateway"))
+                .field("ipv4_dns_servers", wan_status.get("ipv4_dns_servers"))
+                .field("ipv6_dns_servers", wan_status.get("ipv6_dns_servers"))
+                .field("pppoe_username", wan_status.get("pppoe_username"))
+                .field("pppoe_ac_name", wan_status.get("pppoe_ac_name"))
+                .field("connection_type", wan_status.get("connection_type"))
+                .field("wan_type", wan_status.get("wan_type"))
+                .field("ipv4_enabled", wan_status.get("ipv4_enabled"))
+                .field("ipv6_enabled", wan_status.get("ipv6_enabled"))
+                .field("nat_type", wan_status.get("nat_type"))
+                .field("mtu", wan_status.get("mtu"))
+                .field("mru", wan_status.get("mru"))
                 .time(datetime.now(timezone.utc), WritePrecision.NS)
             )
 
@@ -481,25 +469,15 @@ class InfluxDBRouter:
         try:
             point = (
                 Point("wan_bandwidth")
-                .tag("router_ip", wan_bandwidth.get("router_ip", "unknown"))
-                .field(
-                    "upload_current_kbps", wan_bandwidth.get("upload_current_kbps", 0)
-                )
-                .field(
-                    "download_current_kbps",
-                    wan_bandwidth.get("download_current_kbps", 0),
-                )
-                .field(
-                    "upload_current_mbps", wan_bandwidth.get("upload_current_mbps", 0.0)
-                )
-                .field(
-                    "download_current_mbps",
-                    wan_bandwidth.get("download_current_mbps", 0.0),
-                )
-                .field("upload_max_kbps", wan_bandwidth.get("upload_max_kbps", 0))
-                .field("download_max_kbps", wan_bandwidth.get("download_max_kbps", 0))
-                .field("upload_max_mbps", wan_bandwidth.get("upload_max_mbps", 0.0))
-                .field("download_max_mbps", wan_bandwidth.get("download_max_mbps", 0.0))
+                .tag("router_ip", wan_bandwidth["router_ip"])
+                .field("upload_current_kbps", wan_bandwidth["upload_current_kbps"])
+                .field("download_current_kbps", wan_bandwidth["download_current_kbps"])
+                .field("upload_current_mbps", wan_bandwidth["upload_current_mbps"])
+                .field("download_current_mbps", wan_bandwidth["download_current_mbps"])
+                .field("upload_max_kbps", wan_bandwidth["upload_max_kbps"])
+                .field("download_max_kbps", wan_bandwidth["download_max_kbps"])
+                .field("upload_max_mbps", wan_bandwidth["upload_max_mbps"])
+                .field("download_max_mbps", wan_bandwidth["download_max_mbps"])
                 .time(datetime.now(timezone.utc), WritePrecision.NS)
             )
 
