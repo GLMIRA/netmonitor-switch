@@ -130,31 +130,38 @@ class InfluxDBSwitch:
         try:
             points = []
             for port in ports_data["ports"]:
+                # Get link status with fallback
+                link_status = port.get("link", "unknown")
+
                 point = (
                     Point("port_traffic")
                     .tag("switch_ip", ports_data["switch_ip"])
-                    .tag("port", port["port"])
-                    .tag("link", port["link"])
-                    .tag("state", port["state"])
-                    .field("packets_rx", port["packets_rx"])
-                    .field("packets_tx", port["packets_tx"])
-                    .field("bytes_rx", port["bytes_rx"])
-                    .field("bytes_tx", port["bytes_tx"])
-                    .field("bytes_rx_mb", port["bytes_rx_mb"])
-                    .field("bytes_tx_mb", port["bytes_tx_mb"])
-                    .field("total_packets", port["total_packets"])
-                    .field("total_bytes", port["total_bytes"])
-                    .field("is_connected", port["link"] == "up")
+                    .tag("port", port.get("port", "unknown"))
+                    .tag("link", link_status)
+                    .tag("state", port.get("state", "unknown"))
+                    .field("packets_rx", port.get("packets_rx", 0))
+                    .field("packets_tx", port.get("packets_tx", 0))
+                    .field("bytes_rx", port.get("bytes_rx", 0))
+                    .field("bytes_tx", port.get("bytes_tx", 0))
+                    .field("bytes_rx_mb", port.get("bytes_rx_mb", 0.0))
+                    .field("bytes_tx_mb", port.get("bytes_tx_mb", 0.0))
+                    .field("total_packets", port.get("total_packets", 0))
+                    .field("total_bytes", port.get("total_bytes", 0))
+                    .field("is_connected", link_status == "up")
                     .time(datetime.now(timezone.utc), WritePrecision.NS)
                 )
                 points.append(point)
+
+            if not points:
+                self.logger.warning("No port data points to write")
+                return False
 
             self.write_api.write(bucket=self.bucket, record=points)
             self.logger.debug(f"Wrote {len(points)} port records")
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to write port data: {e}")
+            self.logger.error(f"Failed to write port data: {e}", exc_info=True)
             return False
 
     def write_mac_data(self, mac_data: Dict) -> bool:

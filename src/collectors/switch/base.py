@@ -9,7 +9,11 @@ from src.collectors.switch.system_time import get_sistem_time
 from src.collectors.switch.port_status import get_status_port
 
 from src.processors.switch.cpu import process_cpu_info
-from src.processors.switch.port import processor_port_trafic, processor_port_status
+from src.processors.switch.port import (
+    processor_port_trafic,
+    processor_port_status,
+    merge_port_data,
+)
 from src.processors.switch.mac import processor_mac_adress
 from src.processors.switch.system import processor_system_info
 from src.processors.switch.logs import processor_logs
@@ -57,11 +61,9 @@ class DataCollector:
             mac_data = processor_mac_adress(mac_raw)
             logs_data = processor_logs(logs_raw, self.switch_ip)
 
-            ports_combined = {
-                "switch_ip": self.switch_ip,
-                "ports": port_data.get("ports", []),
-                "port_status": port_status_data.get("ports", []),
-            }
+            # Merge port traffic and status data
+            ports_merged = merge_port_data(port_data, port_status_data)
+            ports_merged["switch_ip"] = self.switch_ip
 
             if "mac_addresses" in mac_data:
                 mac_data["switch_ip"] = self.switch_ip
@@ -69,7 +71,7 @@ class DataCollector:
             result = {
                 "cpu": cpu_data,
                 "system": system_data,
-                "ports": ports_combined,
+                "ports": ports_merged,
                 "mac": mac_data,
                 "logs": logs_data,
             }
