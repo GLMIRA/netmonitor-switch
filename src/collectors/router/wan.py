@@ -43,7 +43,14 @@ def collect_wan_info(router_ip: str, session: requests.Session) -> dict:
 
     try:
         url = _build_wan_endpoint_url(router_ip)
+        logger.debug(f"Requesting WAN URL: {url}")
+        logger.debug(f"Session cookies: {session.cookies.get_dict()}")
+
         response = session.get(url, timeout=REQUEST_TIMEOUT_SECONDS)
+        logger.debug(f"WAN response status code: {response.status_code}")
+        logger.debug(f"WAN response headers: {dict(response.headers)}")
+        logger.debug(f"WAN response content (first 200 chars): {response.text[:200]}")
+
         response.raise_for_status()
 
         wan_data = response.json()
