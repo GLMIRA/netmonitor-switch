@@ -226,9 +226,30 @@ class RouterMonitor:
         self.logger.info("Authentication successful!")
         return True
 
+    def test_auth(self) -> bool:
+        """Testa se a sessão ainda é válida."""
+        if self.session is None:
+            return False
+
+        try:
+            test_url = f"http://{self.router_ip}/api/system/HostInfo"
+            response = self.session.get(test_url, timeout=3)
+
+            if response.status_code in [401, 403, 404]:
+                self.logger.warning("Session expired (auth required)")
+                self.session = None
+                return False
+
+            return True
+
+        except Exception as e:
+            self.logger.warning(f"Session test failed: {e}")
+            self.session = None
+            return False
+
     def ensure_auth(self) -> bool:
         """Garante que está autenticado."""
-        if self.session is None:
+        if not self.test_auth():
             return self.authenticate()
         return True
 
